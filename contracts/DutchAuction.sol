@@ -34,7 +34,7 @@ library DutchAuctionLib {
         uint256 timespan,
         uint256 highest_amount,
         uint256 lowest_amount
-    ) public returns (DutchAuction memory) {
+    ) internal returns (DutchAuction memory) {
         emit DutchAuctionCreated(id, block.timestamp, timespan, lowest_amount);
         return
             DutchAuction(
@@ -47,7 +47,7 @@ library DutchAuctionLib {
             );
     }
 
-    function auto_accept_limit(DutchAuction storage auction)
+    function min_bid(DutchAuction storage auction)
         internal
         view
         returns (uint256)
@@ -68,9 +68,9 @@ library DutchAuctionLib {
         }
     }
 
-    function place_bid(DutchAuction storage auction) public {
+    function place_bid(DutchAuction storage auction) internal {
         require(!auction.finished, "Auction finished!");
-        require(msg.value >= auto_accept_limit(auction), "Bid too low!");
+        require(msg.value >= min_bid(auction), "Bid too low!");
         auction.finished = true;
         emit AuctionFinished(auction.id, msg.sender, msg.value);
     }

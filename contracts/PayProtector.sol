@@ -6,6 +6,31 @@ import "./Order.sol";
 contract PayProtector {
     using OrderLib for Order;
 
+    event OrderCreated(
+        uint256 id,
+        address indexed buyer,
+        address indexed seller,
+        uint256 amount
+    );
+    event OrderCancelled(uint256 indexed id);
+    event OrderInsured(
+        uint256 indexed id,
+        address indexed insurer,
+        uint256 amount
+    );
+    event OrderResolved(uint256 indexed id, bool claimed);
+    event DutchAuctionCreated(
+        uint256 indexed id,
+        uint256 start_timestamp,
+        uint256 timespan,
+        uint256 lowest_amount
+    );
+    event AuctionFinished(
+        uint256 indexed id,
+        address indexed insurer,
+        uint256 amount
+    );
+
     Order[] orders;
     uint256 auction_time;
 
@@ -20,6 +45,7 @@ contract PayProtector {
 
     function create(address seller, uint256 amount)
         external
+        payable
         returns (uint256 id)
     {
         id = orders.length;
@@ -27,11 +53,19 @@ contract PayProtector {
     }
 
     function cancel(uint256 id) external validate(id) {
-        require(id < orders.length, "Invalid ID!");
         orders[id].cancel();
     }
 
     function insure(uint256 id) external payable validate(id) {
-        require(id < orders.length, "Invalid ID!");
+        orders[id].insure();
+    }
+
+    function min_bid(uint256 id)
+        external
+        view
+        validate(id)
+        returns (uint256 amount)
+    {
+        return orders[id].min_bid();
     }
 }

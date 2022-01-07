@@ -25,11 +25,6 @@ struct Order {
 library OrderLib {
     using DutchAuctionLib for DutchAuction;
 
-    modifier only(address addr) {
-        require(msg.sender == addr);
-        _;
-    }
-
     event OrderCreated(
         uint256 id,
         address indexed buyer,
@@ -44,13 +39,19 @@ library OrderLib {
     );
     event OrderResolved(uint256 indexed id, bool claimed);
 
+    modifier only(address addr) {
+        require(msg.sender == addr);
+        _;
+    }
+
     function create(
         uint256 id,
         address seller,
         uint256 timespan,
         uint256 amount
-    ) public returns (Order memory) {
+    ) internal returns (Order memory) {
         require(msg.value >= amount, "Order amount larger than amount paid!");
+        require(msg.value <= 2 * amount, "More than twice the amount paid!");
         uint256 prepaid_insurance = msg.value - amount;
         emit OrderCreated(id, msg.sender, seller, amount);
         DutchAuction memory auction = DutchAuctionLib.create(
@@ -72,14 +73,23 @@ library OrderLib {
             );
     }
 
-    function cancel(Order storage order) public only(order.buyer) {
+    function cancel(Order storage order) internal only(order.buyer) {
         require(order.state == OrderState.Insuring);
         order.state == OrderState.Cancelled;
         payable(order.buyer).transfer(order.amount + order.insurance);
         emit OrderCancelled(order.id);
     }
 
-    function insure(Order storage order) public {
+    function min_bid(Order storage order)
+        internal
+        view
+        returns (uint256 amount)
+    {
+        require(order.state == OrderState.Insuring);
+        return order.auction.min_bid();
+    }
+
+    function insure(Order storage order) internal {
         require(order.state == OrderState.Insuring);
         order.state == OrderState.Insured;
         order.auction.place_bid();
@@ -91,8 +101,10 @@ library OrderLib {
         emit OrderInsured(order.id, msg.sender, msg.value);
     }
 
-    function resolve(Order storage order, bool claim) public only(order.buyer) {
-        require(msg.sender == order.buyer);
+    function resolve(Order storage order, bool claim)
+        internal
+        only(order.buyer)
+    {
         require(order.state == OrderState.Insured);
         if (claim) {
             order.state = OrderState.Claimed;
