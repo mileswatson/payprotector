@@ -25,6 +25,20 @@ struct Transaction {
 library TransactionLib {
     using DutchAuctionLib for DutchAuction;
 
+    event TransactionCreated(
+        uint256 id,
+        address indexed buyer,
+        address indexed seller,
+        uint256 amount
+    );
+    event TransactionCancelled(uint256 indexed id);
+    event TransactionInsured(
+        uint256 indexed id,
+        address indexed insurer,
+        uint256 amount
+    );
+    event TransactionResolved(uint256 indexed id, bool claimed);
+
     function create(
         uint256 id,
         address seller,
@@ -36,7 +50,9 @@ library TransactionLib {
             "Transaction amount larger than amount paid!"
         );
         uint256 prepaid_insurance = msg.value - amount;
+        emit TransactionCreated(id, msg.sender, seller, amount);
         DutchAuction memory auction = DutchAuctionLib.create(
+            id,
             timespan,
             amount,
             amount - prepaid_insurance
@@ -61,6 +77,7 @@ library TransactionLib {
         payable(transaction.buyer).transfer(
             transaction.amount + transaction.insurance
         );
+        emit TransactionCancelled(transaction.id);
     }
 
     function insure(Transaction storage transaction) public {
@@ -73,6 +90,7 @@ library TransactionLib {
         transaction.insurance = transaction.amount;
         transaction.insurer = msg.sender;
         payable(transaction.seller).transfer(transaction.amount);
+        emit TransactionInsured(transaction.id, msg.sender, msg.value);
     }
 
     function resolve(Transaction storage transaction, bool claim) public {
@@ -85,5 +103,6 @@ library TransactionLib {
             transaction.state = TransactionState.Unclaimed;
             payable(transaction.insurer).transfer(transaction.insurance);
         }
+        emit TransactionResolved(transaction.id, claim);
     }
 }

@@ -7,6 +7,7 @@ struct HighestBid {
 }
 
 struct DutchAuction {
+    uint256 id;
     uint256 start_timestamp;
     uint256 timespan;
     uint256 highest_amount;
@@ -15,13 +16,29 @@ struct DutchAuction {
 }
 
 library DutchAuctionLib {
+    event DutchAuctionCreated(
+        uint256 indexed id,
+        uint256 start_timestamp,
+        uint256 timespan,
+        uint256 lowest_amount
+    );
+
+    event AuctionFinished(
+        uint256 indexed id,
+        address indexed insurer,
+        uint256 amount
+    );
+
     function create(
+        uint256 id,
         uint256 timespan,
         uint256 highest_amount,
         uint256 lowest_amount
-    ) public view returns (DutchAuction memory) {
+    ) public returns (DutchAuction memory) {
+        emit DutchAuctionCreated(id, block.timestamp, timespan, lowest_amount);
         return
             DutchAuction(
+                id,
                 block.timestamp,
                 timespan,
                 highest_amount,
@@ -55,5 +72,6 @@ library DutchAuctionLib {
         require(!auction.finished, "Auction finished!");
         require(msg.value >= auto_accept_limit(auction), "Bid too low!");
         auction.finished = true;
+        emit AuctionFinished(auction.id, msg.sender, msg.value);
     }
 }
