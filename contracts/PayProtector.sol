@@ -31,7 +31,7 @@ contract PayProtector {
         uint256 amount
     );
 
-    Order[] orders;
+    Order[] public orders;
     uint256 auction_time;
 
     constructor(uint256 _auction_time) {
@@ -67,5 +67,9 @@ contract PayProtector {
         returns (uint256 amount)
     {
         return orders[id].min_bid();
+    }
+
+    function resolve(uint256 id, bool claim) external validate(id) {
+        orders[id].resolve(claim);
     }
 }

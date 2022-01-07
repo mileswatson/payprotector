@@ -91,7 +91,7 @@ library OrderLib {
 
     function insure(Order storage order) internal {
         require(order.state == OrderState.Insuring);
-        order.state == OrderState.Insured;
+        order.state = OrderState.Insured;
         order.auction.place_bid();
         uint256 refund = order.insurance - (order.amount - msg.value);
         payable(order.buyer).transfer(refund);
@@ -105,7 +105,7 @@ library OrderLib {
         internal
         only(order.buyer)
     {
-        require(order.state == OrderState.Insured);
+        require(order.state == OrderState.Insured, "Invalid state!");
         if (claim) {
             order.state = OrderState.Claimed;
             payable(order.buyer).transfer(order.insurance);
